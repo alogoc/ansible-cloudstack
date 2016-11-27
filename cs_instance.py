@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible. If not, see <http://www.gnu.org/licenses/>.
 
+
 DOCUMENTATION = '''
 ---
 module: cs_instance
@@ -186,6 +187,12 @@ options:
     required: false
     default: []
     aliases: [ 'affinity_group' ]
+  affinity_groups_ids:
+    description:
+      - Affinity groups ids to be applied to the new instance.
+    required: false
+    default: []
+    aliases: [ 'affinity_group_id' ]
   user_data:
     description:
       - Optional data (ASCII) that can be sent to the instance upon a successful deployment.
@@ -235,7 +242,6 @@ EXAMPLES = '''
       - Server Integration
       - Sync Integration
       - Storage Integration
-
 # For changing a running instance, use the 'force' parameter
 - local_action:
     module: cs_instance
@@ -244,7 +250,6 @@ EXAMPLES = '''
     iso: Linux Debian 7 64-bit
     service_offering: 2cpu_2gb
     force: yes
-
 # Create or update a instance on Exoscale's public cloud using display_name.
 # Note: user_data can be used to kickstart the instance using cloud-init yaml config.
 - local_action:
@@ -260,7 +265,6 @@ EXAMPLES = '''
         #cloud-config
         packages:
           - nginx
-
 # Create an instance with multiple interfaces specifying the IP addresses
 - local_action:
     module: cs_instance
@@ -270,13 +274,10 @@ EXAMPLES = '''
     ip_to_networks:
       - {'network': NetworkA, 'ip': '10.1.1.1'}
       - {'network': NetworkB, 'ip': '192.0.2.1'}
-
 # Ensure an instance is stopped
 - local_action: cs_instance name=web-vm-1 state=stopped
-
 # Ensure an instance is running
 - local_action: cs_instance name=web-vm-1 state=started
-
 # Remove an instance
 - local_action: cs_instance name=web-vm-1 state=absent
 '''
@@ -383,6 +384,11 @@ affinity_groups:
   returned: success
   type: list
   sample: '[ "webservers" ]'
+ affinity_groups_ids:
+  description: Affinity group id the instance is in.
+  returned: success
+  type: list
+  sample: '[ "18ebdbe8-2590-4bd1-b6c8-d239943012c5" ]'
 tags:
   description: List of resource tags associated with the instance.
   returned: success
@@ -1228,6 +1234,7 @@ class AnsibleCloudStackInstance(AnsibleCloudStack):
         args['startvm']             = start_vm
         args['rootdisksize']        = self.module.params.get('root_disk_size')
         args['affinitygroupnames']  = ','.join(self.module.params.get('affinity_groups'))
+        args['affinitygroupids']    = ','.join(self.module.params.get('affinity_groups_ids'))
         args['details']             = self.get_details()
 
         security_groups = self.module.params.get('security_groups')
@@ -1477,6 +1484,11 @@ class AnsibleCloudStackInstance(AnsibleCloudStack):
                 for affinitygroup in instance['affinitygroup']:
                     affinity_groups.append(affinitygroup['name'])
                 self.result['affinity_groups'] = affinity_groups
+            if 'affinitygroup' in instance:
+                affinity_groups_ids = []
+                for affinitygroup in instance['affinitygroup']:
+                    affinity_groups_ids.append(affinitygroup['id'])
+                self.result['affinity_groups_ids'] = affinity_groups_ids
             if 'nic' in instance:
                 for nic in instance['nic']:
                     if nic['isdefault'] and 'ipaddress' in nic:
@@ -1509,6 +1521,7 @@ def main():
         hypervisor = dict(choices=CS_HYPERVISORS, default=None),
         security_groups = dict(type='list', aliases=[ 'security_group' ], default=None),
         affinity_groups = dict(type='list', aliases=[ 'affinity_group' ], default=[]),
+        affinity_groups_ids = dict(type='list', aliases=[ 'affinity_group_id' ], default=[]),
         domain = dict(default=None),
         account = dict(default=None),
         project = dict(default=None),
