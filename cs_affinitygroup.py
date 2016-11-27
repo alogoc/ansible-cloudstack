@@ -712,10 +712,12 @@ class AnsibleCloudStackAffinityGroup(AnsibleCloudStack):
                 'account': self.get_account(key='name'),
                 'domainid': self.get_domain(key='id'),
                 'name': self.module.params.get('name'),
+				'id': self.module.params.get('id'),
             }
             affinity_groups = self.cs.listAffinityGroups(**args)
             if affinity_groups:
                 self.affinity_group = affinity_groups['affinitygroup'][0]
+				self.affinity_group = affinity_groups['affinitygroupid'][0]
         return self.affinity_group
 
     def get_affinity_type(self):
@@ -765,6 +767,7 @@ class AnsibleCloudStackAffinityGroup(AnsibleCloudStack):
                 'projectid': self.get_project(key='id'),
                 'account': self.get_account(key='name'),
                 'domainid': self.get_domain(key='id'),
+				'id': self.get_domain(key='id'),
             }
             if not self.module.check_mode:
                 res = self.cs.deleteAffinityGroup(**args)
